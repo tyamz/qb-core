@@ -401,6 +401,7 @@ function QBCore.Functions.CreateVehicle(source, model, vehtype, coords, warp)
 end
 
 function PaycheckInterval()
+    if not QBCore.Config.Money.PayCheckInterval then return end
     if not next(QBCore.Players) then
         SetTimeout(QBCore.Config.Money.PayCheckTimeOut * (60 * 1000), PaycheckInterval) -- Prevent paychecks from stopping forever once 0 players
         return
@@ -417,15 +418,18 @@ function PaycheckInterval()
                         TriggerClientEvent('QBCore:Notify', Player.PlayerData.source, Lang:t('error.company_too_poor'), 'error')
                     else
                         Player.Functions.AddMoney('bank', payment, 'paycheck')
+                        TriggerEvent('QBCore:Server:PlayerPaid', Player.PlayerData.source, Player.PlayerData.job.name, Player.PlayerData.job.grade.level, payment)
                         exports['qb-banking']:RemoveMoney(Player.PlayerData.job.name, payment, 'Employee Paycheck')
                         TriggerClientEvent('QBCore:Notify', Player.PlayerData.source, Lang:t('info.received_paycheck', { value = payment }))
                     end
                 else
                     Player.Functions.AddMoney('bank', payment, 'paycheck')
+                    TriggerEvent('QBCore:Server:PlayerPaid', Player.PlayerData.source, Player.PlayerData.job.name, Player.PlayerData.job.grade.level, payment)
                     TriggerClientEvent('QBCore:Notify', Player.PlayerData.source, Lang:t('info.received_paycheck', { value = payment }))
                 end
             else
                 Player.Functions.AddMoney('bank', payment, 'paycheck')
+                TriggerEvent('QBCore:Server:PlayerPaid', Player.PlayerData.source, Player.PlayerData.job.name, Player.PlayerData.job.grade.level, payment)
                 TriggerClientEvent('QBCore:Notify', Player.PlayerData.source, Lang:t('info.received_paycheck', { value = payment }))
             end
         end
