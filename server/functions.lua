@@ -659,6 +659,42 @@ function QBCore.Functions.IsPlayerBanned(source)
     return false
 end
 
+---Loads jobs from the database and overwrites the shared jobs table.
+---@return boolean
+function QBCore.Functions.LoadJobs()
+    if not QBCore.Config.Server.UseJobsDatabase then return false end
+
+    local jobs = MySQL.query.await('SELECT * FROM jobs', {})
+    local grades = MySQL.query.await('SELECT * FROM job_grades', {})
+    if not jobs or not grades then return false end
+
+    local newJobs = {}
+
+    for _, v in pairs(jobs) do
+        newJobs[v.name] = {
+            label = v.label,
+            type = v.type or 'none',
+            defaultDuty = v.default_duty == 1,
+            offDutyPay = v.off_duty_pay == 1,
+            grades = {}
+        }
+    end
+
+    for _, v in pairs(grades) do
+        local job = newJobs[v.job_name]
+        if job then
+            job.grades[tostring(v.grade)] = {
+                name = v.name,
+                payment = v.payment,
+                isboss = v.isboss == 1
+            }
+        end
+    end
+
+    QBShared.Jobs = newJobs
+    return true
+end
+
 -- Retrieves information about the database connection.
 --- @return table; A table containing the database information.
 function QBCore.Functions.GetDatabaseInfo()

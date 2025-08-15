@@ -42,6 +42,26 @@ local function AddJob(jobName, job)
 
     QBCore.Shared.Jobs[jobName] = job
 
+    if QBCore.Config.Server.UseJobsDatabase then
+        MySQL.insert('INSERT INTO jobs (name, label, type, default_duty, off_duty_pay) VALUES (?, ?, ?, ?, ?)', {
+            jobName,
+            job.label,
+            job.type or 'none',
+            job.defaultDuty and 1 or 0,
+            job.offDutyPay and 1 or 0
+        })
+
+        for grade, info in pairs(job.grades or {}) do
+            MySQL.insert('INSERT INTO job_grades (job_name, grade, name, payment, isboss) VALUES (?, ?, ?, ?, ?)', {
+                jobName,
+                tonumber(grade),
+                info.name,
+                info.payment,
+                info.isboss and 1 or 0
+            })
+        end
+    end
+
     TriggerClientEvent('QBCore:Client:OnSharedUpdate', -1, 'Jobs', jobName, job)
     TriggerEvent('QBCore:Server:UpdateObject')
     return true, 'success'
@@ -70,11 +90,34 @@ local function AddJobs(jobs)
             errorItem = jobs[key]
             break
         end
-
-        QBCore.Shared.Jobs[key] = value
     end
 
     if not shouldContinue then return false, message, errorItem end
+
+    for key, value in pairs(jobs) do
+        QBCore.Shared.Jobs[key] = value
+
+        if QBCore.Config.Server.UseJobsDatabase then
+            MySQL.insert('INSERT INTO jobs (name, label, type, default_duty, off_duty_pay) VALUES (?, ?, ?, ?, ?)', {
+                key,
+                value.label,
+                value.type or 'none',
+                value.defaultDuty and 1 or 0,
+                value.offDutyPay and 1 or 0
+            })
+
+            for grade, info in pairs(value.grades or {}) do
+                MySQL.insert('INSERT INTO job_grades (job_name, grade, name, payment, isboss) VALUES (?, ?, ?, ?, ?)', {
+                    key,
+                    tonumber(grade),
+                    info.name,
+                    info.payment,
+                    info.isboss and 1 or 0
+                })
+            end
+        end
+    end
+
     TriggerClientEvent('QBCore:Client:OnSharedUpdateMultiple', -1, 'Jobs', jobs)
     TriggerEvent('QBCore:Server:UpdateObject')
     return true, message, nil
@@ -95,6 +138,10 @@ local function RemoveJob(jobName)
 
     QBCore.Shared.Jobs[jobName] = nil
 
+    if QBCore.Config.Server.UseJobsDatabase then
+        MySQL.update('DELETE FROM jobs WHERE name = ?', { jobName })
+    end
+
     TriggerClientEvent('QBCore:Client:OnSharedUpdate', -1, 'Jobs', jobName, nil)
     TriggerEvent('QBCore:Server:UpdateObject')
     return true, 'success'
@@ -114,6 +161,28 @@ local function UpdateJob(jobName, job)
     end
 
     QBCore.Shared.Jobs[jobName] = job
+
+    if QBCore.Config.Server.UseJobsDatabase then
+        MySQL.update('UPDATE jobs SET label = ?, type = ?, default_duty = ?, off_duty_pay = ? WHERE name = ?', {
+            job.label,
+            job.type or 'none',
+            job.defaultDuty and 1 or 0,
+            job.offDutyPay and 1 or 0,
+            jobName
+        })
+
+        MySQL.update('DELETE FROM job_grades WHERE job_name = ?', { jobName })
+
+        for grade, info in pairs(job.grades or {}) do
+            MySQL.insert('INSERT INTO job_grades (job_name, grade, name, payment, isboss) VALUES (?, ?, ?, ?, ?)', {
+                jobName,
+                tonumber(grade),
+                info.name,
+                info.payment,
+                info.isboss and 1 or 0
+            })
+        end
+    end
 
     TriggerClientEvent('QBCore:Client:OnSharedUpdate', -1, 'Jobs', jobName, job)
     TriggerEvent('QBCore:Server:UpdateObject')

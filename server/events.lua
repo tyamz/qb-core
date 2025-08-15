@@ -40,6 +40,14 @@ if readyFunction ~= nil then
         if result and result[1] then
             bansTableExists = true
         end
+
+        if QBCore.Config.Server.UseJobsDatabase then
+            local jobsTable = MySQL.query.await('SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = "jobs";', {DatabaseInfo.database})
+            local gradesTable = MySQL.query.await('SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = ? AND TABLE_NAME = "job_grades";', {DatabaseInfo.database})
+            if jobsTable and jobsTable[1] and gradesTable and gradesTable[1] then
+                QBCore.Functions.LoadJobs()
+            end
+        end
     end)
 end
 
